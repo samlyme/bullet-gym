@@ -14,6 +14,8 @@ TORQUE_CONTROL: int
 KEY_IS_DOWN: int
 B3G_SPACE: int
 
+LINK_FRAME: int
+
 def connect(mode: int) -> int: ...
 def disconnect() -> None: ...
 def setAdditionalSearchPath(path: str) -> None: ...
@@ -67,3 +69,15 @@ def getBasePositionAndOrientation(
 ) -> Tuple[Tuple[float, float, float], Tuple[float, float, float, float]]: ...
 
 def getKeyboardEvents() -> Dict[int, int]: ...
+
+
+def applyExternalForce(
+    objectUniqueId: int, 
+    linkIndex: int, 
+    forceObj: list[float],
+    posObj: list[float],
+    flags: int,
+    physicsClientId: int | None = None
+) -> None: ...
+
+def getDynamicsInfo(bodyUniqueId: int, linkIndex: int, physicsClientId: int | None = None) -> Any: ...
