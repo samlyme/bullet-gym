@@ -1,5 +1,6 @@
 # quad_point_control.py
-import math, time
+import math
+import time  # noqa: F401
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -54,7 +55,7 @@ def load_world():
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -G)
     p.loadURDF("plane.urdf")
-    drone = p.loadURDF("quadrotor.urdf", [0,0,0.8], p.getQuaternionFromEuler([0,0,0]))
+    drone = p.loadURDF("quadrotor.urdf", (0,0,0.8), p.getQuaternionFromEuler((0,0,0)))
     return drone
 
 def joint_indices_by_name(body, names):
@@ -66,16 +67,16 @@ def joint_indices_by_name(body, names):
 
 def spin_joints(body, joint_indices, omegas):
     for j_idx, w in zip(joint_indices, omegas):
-        p.setJointMotorControl2(bodyIndex=body, jointIndex=j_idx,
+        p.setJointMotorControl2(bodyUniqueId=body, jointIndex=j_idx,
                                 controlMode=p.VELOCITY_CONTROL,
                                 targetVelocity=w, force=1e3)
 
 def apply_rotor_forces(body, rotors, thrusts):
     total_yaw = 0.0
     for rotor, T in zip(rotors, thrusts):
-        p.applyExternalForce(body, -1, [0,0,float(T)], rotor["pos"], p.LINK_FRAME)
+        p.applyExternalForce(body, -1, (0,0,float(T)), rotor["pos"], p.LINK_FRAME)
         total_yaw += rotor["dir"] * KM_PER_T * float(T)
-    p.applyExternalTorque(body, -1, [0,0,float(total_yaw)], p.LINK_FRAME)
+    p.applyExternalTorque(body, -1, (0,0,float(total_yaw)), p.LINK_FRAME)
 
 # -------- Target API --------
 TARGET = {"pos": np.array([0.0, 0.0, 1.2]), "yaw": 0.0}  # default
@@ -112,6 +113,8 @@ if __name__ == "__main__":
             set_target(*waypoints[wp_idx])
 
         pos, orn = p.getBasePositionAndOrientation(drone)
+        if step == 0:
+            print(type(pos), type(orn))
         v_lin, w_world = p.getBaseVelocity(drone)
         roll, pitch, yaw = quat_to_euler(orn)
         R = p.getMatrixFromQuaternion(orn)

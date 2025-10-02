@@ -8,8 +8,8 @@ p.setAdditionalSearchPath(pybullet_data.getDataPath())
 p.setGravity(0, 0, -10)
 
 planeId = p.loadURDF("plane.urdf")
-startPos = [0, 0, 1]
-startOrientation = p.getQuaternionFromEuler([0, 0, 0])
+startPos = (0, 0, 1)
+startOrientation = p.getQuaternionFromEuler((0, 0, 0))
 robotId = p.loadURDF("r2d2.urdf", startPos, startOrientation)
 
 # Wheel joints (from your printout)

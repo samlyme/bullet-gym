@@ -1,5 +1,5 @@
 # typings/pybullet/__init__.pyi
-from typing import Any, Dict, Iterable, Sequence, Tuple
+from typing import Any, Dict, Iterable, Sequence, Tuple  # noqa: F401
 
 # Connection modes
 GUI: int
@@ -16,6 +16,16 @@ B3G_SPACE: int
 
 LINK_FRAME: int
 
+Vec3 = tuple[float, float, float]
+Vec4 = tuple[float, float, float]
+Vec9 = tuple[float, float, float,
+             float, float, float,
+             float, float, float]
+
+Euler = Vec3
+Quaternion = Vec4
+RotationMatrix = Vec9
+
 def connect(mode: int) -> int: ...
 def disconnect() -> None: ...
 def setAdditionalSearchPath(path: str) -> None: ...
@@ -23,18 +33,18 @@ def setGravity(x: float, y: float, z: float) -> None: ...
 
 def loadURDF(
     fileName: str,
-    basePosition: Sequence[float] | None = ...,
-    baseOrientation: Sequence[float] | None = ...,
+    basePosition: Vec3 | None = ...,
+    baseOrientation: Quaternion | None = ...,
     useFixedBase: bool | int | None = ...,
     flags: int | None = ...,
 ) -> int: ...
 
-def getQuaternionFromEuler(euler: Sequence[float]) -> Tuple[float, float, float, float]: ...
+def getQuaternionFromEuler(euler: Euler) -> Quaternion: ...
 
 def resetBasePositionAndOrientation(
     bodyUniqueId: int,
-    pos: Sequence[float],
-    orn: Sequence[float],
+    pos: Vec3,
+    orn: Vec4,
 ) -> None: ...
 
 def getNumJoints(bodyUniqueId: int) -> int: ...
@@ -66,7 +76,7 @@ def stepSimulation() -> None: ...
 
 def getBasePositionAndOrientation(
     bodyUniqueId: int,
-) -> Tuple[Tuple[float, float, float], Tuple[float, float, float, float]]: ...
+) -> Tuple[Vec3, Quaternion]: ...
 
 def getKeyboardEvents() -> Dict[int, int]: ...
 
@@ -74,10 +84,18 @@ def getKeyboardEvents() -> Dict[int, int]: ...
 def applyExternalForce(
     objectUniqueId: int, 
     linkIndex: int, 
-    forceObj: list[float],
-    posObj: list[float],
+    forceObj: Vec3,
+    posObj: Vec3,
     flags: int,
     physicsClientId: int | None = None
 ) -> None: ...
 
-def getDynamicsInfo(bodyUniqueId: int, linkIndex: int, physicsClientId: int | None = None) -> Any: ...
+def getDynamicsInfo(bodyUniqueId: int, linkIndex: int, physicsClientId: int | None = ...) -> Any: ...
+
+def getBaseVelocity(bodyUniqueId: int, physicsClientId: int | None = ...) -> tuple[Vec3, Vec3]: ...
+
+def getEulerFromQuaternion(quaternion: Vec4, physicsClientId: int | None = ...) -> Euler: ...
+
+def applyExternalTorque(objectUniqueId: int, linkIndex: int, forceObj: Vec3, flags: int): ...
+
+def getMatrixFromQuaternion(quaternion: Quaternion) -> RotationMatrix:...
