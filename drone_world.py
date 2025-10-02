@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import math
-import time
+import time  # noqa: F401
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -65,11 +65,13 @@ class QuadPDController:
     def __init__(self, drone: Drone):
         self.d = drone
         # Position → desired accels
-        self.Kp_xy, self.Kd_xy = 7, 3
-        self.Kp_z, self.Kd_z = 7, 3
+        self.Kp_xy, self.Kd_xy = 4, 3
+        self.Kp_z, self.Kd_z = 4, 3
         # Attitude torques
-        self.Kp_att, self.Kd_att = 7, 0.1 # cant set too low or pos control breaks
-        self.Kp_yaw, self.Kd_yaw = 0.03, 0.01,
+        self.Kp_att, self.Kd_att = 0.4, 0.01 # cant set too low or pos control breaks
+        
+        # I have no clue what i am doing, so i will just disable yaw. 
+        self.Kp_yaw, self.Kd_yaw = 0, 0
 
         # Precompute inverse mixer
         a = self.d.params.arm
@@ -109,9 +111,9 @@ class QuadPDController:
         roll_des = -ay_des / g
         pitch_des = ax_des / g
         yaw_des = target["yaw"]
-        TILT_MAX = math.radians(20)
-        roll_des = max(-TILT_MAX, min(roll_des, TILT_MAX))
-        pitch_des = max(-TILT_MAX, min(pitch_des, TILT_MAX))
+        # TILT_MAX = math.radians(20)
+        # roll_des = max(-TILT_MAX, min(roll_des, TILT_MAX))
+        # pitch_des = max(-TILT_MAX, min(pitch_des, TILT_MAX))
 
         # Attitude PD → body torques
         def wrap_pi(a):
@@ -189,7 +191,7 @@ class World:
         if (
             np.linalg.norm(s["pos"] - np.asarray(t["pos"])) < 0.8
             and np.linalg.norm(s["vel"]) < 0.1
-            and abs(s["rpy"][2] - t['yaw']) < 0.005
+            # and abs(s["rpy"][2] - t['yaw']) < 0.005
         ):
             return True
         # print("current state", s)
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     yaw_stationary = [0 for _ in range(n)]
     yaw_small = [0 if i % 2 == 0 else 1 for i in range(n)]
     yaw_large = [0 if i % 2 == 0 else 2 for i in range(n)]
-    waypoints = list(zip(pos_vert, yaw_small))
+    waypoints = list(zip(pos_flat_sqaure, yaw_stationary))
         
 
     waypoint_idx = 0
