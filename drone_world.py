@@ -111,9 +111,9 @@ class QuadPDController:
         roll_des = -ay_des / g
         pitch_des = ax_des / g
         yaw_des = target["yaw"]
-        # TILT_MAX = math.radians(20)
-        # roll_des = max(-TILT_MAX, min(roll_des, TILT_MAX))
-        # pitch_des = max(-TILT_MAX, min(pitch_des, TILT_MAX))
+        TILT_MAX = math.radians(20)
+        roll_des = max(-TILT_MAX, min(roll_des, TILT_MAX))
+        pitch_des = max(-TILT_MAX, min(pitch_des, TILT_MAX))
 
         # Attitude PD → body torques
         def wrap_pi(a):
@@ -201,7 +201,7 @@ class World:
 
 # ---------- Example run ----------
 if __name__ == "__main__":
-    world = World()
+    world = World(connection_type=p.GUI)
     n = 6
     pos_stationary = [(0, 0 ,1) for _ in range(n)]
     pos_flat_sqaure = [
@@ -212,11 +212,20 @@ if __name__ == "__main__":
         (1, 0, 1),
         (1, 1, 1),
     ]
+    pos_vert_sqaure = [
+        (0, 0, 1),
+        (1, 0, 2),
+        (1, 1, 1),
+        (0, 1, 2),
+        (1, 0, 1),
+        (1, 1, 2),
+    ]
     pos_vert = [(0, 0, 1 if i % 2 == 0 else 2) for i in range(n)]
+    pos_far = [(0, 5 if i % 2 == 0 else -5, 1) for i in range(n)]
     yaw_stationary = [0 for _ in range(n)]
     yaw_small = [0 if i % 2 == 0 else 1 for i in range(n)]
     yaw_large = [0 if i % 2 == 0 else 2 for i in range(n)]
-    waypoints = list(zip(pos_flat_sqaure, yaw_stationary))
+    waypoints = list(zip(pos_vert_sqaure, yaw_stationary))
         
 
     waypoint_idx = 0
