@@ -1,6 +1,9 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import math
-import time  # noqa: F401
+import time
+from tkinter.tix import Control
+from typing import Type  # noqa: F401
 import numpy as np
 import pybullet as p
 import pybullet_data
@@ -59,9 +62,18 @@ class Drone:
             total_yaw += d * self.params.km_per_t * float(T)
         p.applyExternalTorque(self.body, -1, (0, 0, total_yaw), p.LINK_FRAME)
 
+class Controller(ABC):
+
+    @abstractmethod
+    def __init__(self, drone: Drone) -> None:
+        pass
+
+    @abstractmethod
+    def update(self, state, target) -> tuple:
+        pass
 
 # ---------- Controller (strategy) ----------
-class QuadPDController:
+class QuadPDController(Controller):
     def __init__(self, drone: Drone):
         self.d = drone
         # Position → desired accels
@@ -139,7 +151,7 @@ class QuadPDController:
 
 # ---------- World (orchestrator) ----------
 class World:
-    def __init__(self, dt=1 / 240, connection_type: int = p.GUI):
+    def __init__(self, controller_type: Type[Controller], dt=1 / 240, connection_type: int = p.GUI):
         self.dt = dt
         p.connect(connection_type)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -160,7 +172,7 @@ class World:
         hubs = ((+0.15, 0, 0), (0, +0.15, 0), (-0.15, 0, 0), (0, -0.15, 0))
         params = DroneParams()
         self.drone = Drone(body, rotors, hubs, params)  # type: ignore
-        self.controller = QuadPDController(self.drone)
+        self.controller = controller_type(self.drone)
         self.target = {"pos": (0, 0, 1), "yaw": 0}
 
     def set_target(self, target):
@@ -201,7 +213,7 @@ class World:
 
 # ---------- Example run ----------
 if __name__ == "__main__":
-    world = World(connection_type=p.GUI)
+    world = World(controller_type=QuadPDController, connection_type=p.GUI)
     n = 6
     pos_stationary = [(0, 0 ,1) for _ in range(n)]
     pos_flat_sqaure = [
