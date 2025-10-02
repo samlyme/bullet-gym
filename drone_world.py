@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from itertools import cycle
 import math
 import time
-from tkinter.tix import Control
 from typing import Type  # noqa: F401
 import numpy as np
 import pybullet as p
@@ -151,7 +151,7 @@ class QuadPDController(Controller):
 
 # ---------- World (orchestrator) ----------
 class World:
-    def __init__(self, controller_type: Type[Controller], dt=1 / 240, connection_type: int = p.GUI):
+    def __init__(self, controller_type: Type[Controller], dt=1 / 240, connection_type: int = p.GUI, record_controls: bool = False):
         self.dt = dt
         p.connect(connection_type)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -175,12 +175,24 @@ class World:
         self.controller = controller_type(self.drone)
         self.target = {"pos": (0, 0, 1), "yaw": 0}
 
+        self.record_controls = record_controls
+        self.controls = []
+
     def set_target(self, target):
-        self.target = {"pos": target[0], "yaw": target[1]}
+        # TODO: implement yaw
+        self.target = {"pos": target, "yaw": 0}
 
     def step(self):
         s = self.drone.get_state()
         T, w = self.controller.update(s, self.target)
+
+        if self.record_controls:
+            self.controls.append({
+                "state":s, 
+                "target": dict(self.target), 
+                "thrusts": T
+            })
+
         # Visual spin *without* adding unwanted motor torques:
         p.setJointMotorControlArray(
             self.drone.body,
@@ -210,6 +222,9 @@ class World:
         # print("current target", t)
         return False
 
+    def end(self):
+        p.disconnect()
+
 
 # ---------- Example run ----------
 if __name__ == "__main__":
@@ -234,21 +249,17 @@ if __name__ == "__main__":
     ]
     pos_vert = [(0, 0, 1 if i % 2 == 0 else 2) for i in range(n)]
     pos_far = [(0, 5 if i % 2 == 0 else -5, 1) for i in range(n)]
-    yaw_stationary = [0 for _ in range(n)]
-    yaw_small = [0 if i % 2 == 0 else 1 for i in range(n)]
-    yaw_large = [0 if i % 2 == 0 else 2 for i in range(n)]
-    waypoints = list(zip(pos_vert_sqaure, yaw_stationary))
+    waypoints = cycle(pos_vert_sqaure)
         
 
-    waypoint_idx = 0
-    for k in range(240 * 240):
+    for k in range(10 * 240):
         # change target when waypoint is reached
         if world.reached():
-            print("going to waypoint", waypoints[waypoint_idx % len(waypoints)])
-            world.set_target(waypoints[waypoint_idx % len(waypoints)])
-            waypoint_idx += 1
+            waypoint = next(waypoints)
+            print("going to", waypoint)
+            world.set_target(waypoint)
 
         world.step()
 
         # time.sleep(world.dt)
-    p.disconnect()
+    world.end()
