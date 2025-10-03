@@ -32,6 +32,9 @@
       <geometry>
         <cylinder radius="0.05" length="0.01"/>
       </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
     </visual>
   </link>
   <joint name="rotor1_joint" type="continuous">
@@ -52,6 +55,9 @@
       <geometry>
         <cylinder radius="0.05" length="0.01"/>
       </geometry>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
+      </material>
     </visual>
   </link>
   <joint name="rotor2_joint" type="continuous">
@@ -72,6 +78,9 @@
       <geometry>
         <cylinder radius="0.05" length="0.01"/>
       </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
     </visual>
   </link>
   <joint name="rotor3_joint" type="continuous">
@@ -92,6 +101,9 @@
       <geometry>
         <cylinder radius="0.05" length="0.01"/>
       </geometry>
+      <material name="magenta">
+        <color rgba="1 0 1 1"/>
+      </material>
     </visual>
   </link>
   <joint name="rotor4_joint" type="continuous">

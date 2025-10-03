@@ -1,6 +1,10 @@
+import time
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
+
+import pybullet as p
+import pybullet_data
 
 Num = np.float64
 QuinticCoefficients = np.ndarray
@@ -195,74 +199,104 @@ class LeeController:
 
         b3 = state.R @ E3
         f = -A.dot(b3)
-        nA = np.linalg.norm(A) 
-        
+        nA = np.linalg.norm(A)
+
         if nA < 1e-12:
-            Rc = state.R.copy() 
-            dRc = np.zeros((3,3), dtype=Num)
-            d2Rc = np.zeros((3,3), dtype=Num)
+            Rc = state.R.copy()
+            dRc = np.zeros((3, 3), dtype=Num)
+            d2Rc = np.zeros((3, 3), dtype=Num)
         else:
-            b3c = -A/nA # "Desired body z-axis" -> b3 command
+            b3c = -A / nA  # "Desired body z-axis" -> b3 command
             C = np.cross(b3c, desired.b1)
             nC = np.linalg.norm(C)
             if nC < 1e-12:
-                Rc = state.R.copy() 
-                dRc = np.zeros((3,3), dtype=Num)
-                d2Rc = np.zeros((3,3), dtype=Num)
+                Rc = state.R.copy()
+                dRc = np.zeros((3, 3), dtype=Num)
+                d2Rc = np.zeros((3, 3), dtype=Num)
 
             else:
-                b2c = C/nC
+                b2c = C / nC
                 b1c = -np.cross(b3c, b2c)
 
-                Rc = np.column_stack((b1c, b2c, b3c)) # Rotational command
-                
+                Rc = np.column_stack((b1c, b2c, b3c))  # Rotational command
+
                 # "Feed-forward" for desired rotational commands with jerk, snap, and heading derivatives
                 dA = self.params.mass * desired.j
                 d2A = self.params.mass * desired.s
-                
-                db3c = -dA/nA + (A.dot(dA) / (nA**3)) * A # TODO: this line is sus
-                A1n2 = dA @ dA # wtf is this
-                d2b3c = (-d2A / nA
-                         + (2.0 / (nA**3)) * A.dot(dA) * dA
-                         + ((A1n2 + A.dot(d2A))/(nA**3))*A 
-                         - (3.0/(nA**5)) * (A.dot(dA)**2) * A
-                         )
+
+                db3c = -dA / nA + (A.dot(dA) / (nA**3)) * A  # TODO: this line is sus
+                A1n2 = dA @ dA  # wtf is this
+                d2b3c = (
+                    -d2A / nA
+                    + (2.0 / (nA**3)) * A.dot(dA) * dA
+                    + ((A1n2 + A.dot(d2A)) / (nA**3)) * A
+                    - (3.0 / (nA**5)) * (A.dot(dA) ** 2) * A
+                )
 
                 dC = np.cross(db3c, desired.b1) + np.cross(b3c, desired.db1)
-                d2C = np.cross(d2b3c, desired.b1) + np.cross(b3c, desired.d2b1) + 2* np.cross(db3c, desired.db1)
-                
+                d2C = (
+                    np.cross(d2b3c, desired.b1)
+                    + np.cross(b3c, desired.d2b1)
+                    + 2 * np.cross(db3c, desired.db1)
+                )
+
                 # finally the control rotations
-                db2c = dC/nC - (C.dot(dC) / (nC**3)) * C 
+                db2c = dC / nC - (C.dot(dC) / (nC**3)) * C
                 db1c = np.cross(db2c, b3c) + np.cross(b2c, db3c)
-                
-                term = (np.linalg.norm(dC)**2 + C.dot(d2C)) / (nC**3)
-                
-                d2b2c = (d2C / nC
-                         - 2.0 * (C.dot(dC)) / (nC**3) * dC 
-                         - term*C 
-                         + 3.0 * (C.dot(dC) **2) / (nC**5) * C
-                         )
+
+                term = (np.linalg.norm(dC) ** 2 + C.dot(d2C)) / (nC**3)
+
+                d2b2c = (
+                    d2C / nC
+                    - 2.0 * (C.dot(dC)) / (nC**3) * dC
+                    - term * C
+                    + 3.0 * (C.dot(dC) ** 2) / (nC**5) * C
+                )
 
                 d2b1c = (
-                    np.cross(d2b2c, b3c) 
+                    np.cross(d2b2c, b3c)
                     + np.cross(b2c, d2b2c)
                     + 2.0 * np.cross(db2c, db3c)
                 )
 
                 dRc = np.column_stack((db1c, db2c, db3c))
                 d2Rc = np.column_stack((d2b1c, d2b2c, d2b3c))
-        
+
         # desired body rates and accels
         omegac = vee(Rc.T @ dRc)
         domegac = vee(Rc.T @ d2Rc - hat(omegac) @ hat(omegac))
-        
+
         # Errors and moments ??
         eR = 2.0 * vee(Rc.T @ state.R - state.R.T @ Rc)
-        eomega = state.omega - state.R.T @ Rc @ omegac 
-        
-        Jw = self.params.J @ state.omega 
-        feed_forward = self.params.J @ (state.R.T @ Rc @ domegac - hat(state.omega) @ (state.R.T @ Rc @ omegac))
+        eomega = state.omega - state.R.T @ Rc @ omegac
 
-        M = (-self.gains.kr) * eR + (-self.gains.komega)*eomega + np.cross(state.omega, Jw) + feed_forward
-        
+        Jw = self.params.J @ state.omega
+        feed_forward = self.params.J @ (
+            state.R.T @ Rc @ domegac - hat(state.omega) @ (state.R.T @ Rc @ omegac)
+        )
+
+        M = (
+            (-self.gains.kr) * eR
+            + (-self.gains.komega) * eomega
+            + np.cross(state.omega, Jw)
+            + feed_forward
+        )
+
         return ControlSignal(f, M)
+
+
+if __name__ == "__main__":
+    G = 9.81
+    p.connect(p.GUI)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    p.setGravity(0, 0, -G)
+    p.loadURDF("plane.urdf")
+
+    drone = p.loadURDF(
+        "crazyflie.urdf.xacro", (0, 0, 0.8), p.getQuaternionFromEuler((0, 0, 0))
+    )
+
+        
+    while True:
+        p.stepSimulation()
+        # time.sleep(1.0/240.0)
